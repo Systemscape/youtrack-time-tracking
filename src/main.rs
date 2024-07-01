@@ -6,7 +6,8 @@ mod toggl;
 async fn main() -> Result<(), reqwest::Error> {
     info!("Getting time entries...");
 
-    toggl::get_time_entries().await?;
+    let time_entries: Vec<toggl::TimeEntry> = toggl::get_time_entries(90).await?;
+    println!("{:#?}", time_entries);
 
     Ok(())
 }

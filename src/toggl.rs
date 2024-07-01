@@ -6,7 +6,7 @@ use base64::{engine::general_purpose, Engine as _};
 use chrono::{Utc, Duration};
 
 #[derive(Deserialize, Debug)]
-struct TimeEntry {
+pub struct TimeEntry {
     at: String,
     description: Option<String>,
     duration: i64,
@@ -25,7 +25,7 @@ struct ApiConfig {
     token: String,
 }
 
-pub async fn get_time_entries() -> Result<(), reqwest::Error> {
+pub async fn get_time_entries(days: i64) -> Result<Vec<TimeEntry>, reqwest::Error> {
     // Read the config file
     let config_content = fs::read_to_string("config.toml")
         .expect("Failed to read config file");
@@ -37,7 +37,7 @@ pub async fn get_time_entries() -> Result<(), reqwest::Error> {
     let authorization_value = format!("Basic {}", general_purpose::STANDARD.encode(format!("{}:api_token", api_token)));
 
     // Calculate the Unix timestamp for one month ago
-    let one_month_ago = Utc::now() - Duration::days(90);
+    let one_month_ago = Utc::now() - Duration::days(days);
     let since_timestamp = one_month_ago.timestamp();
 
     // Create the HTTP client and make the request
@@ -51,8 +51,6 @@ pub async fn get_time_entries() -> Result<(), reqwest::Error> {
 
     // Handle the JSON response as an array
     let time_entries: Vec<TimeEntry> = response.json().await?;
-    
-    println!("{:#?}", time_entries);
 
-    Ok(())
+    Ok(time_entries)
 }
