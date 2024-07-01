@@ -11,6 +11,8 @@ mod youtrack;
 
 mod toggl;
 
+const REGEX_STRING: &str = r"(\w+-\d+) (.*)";
+
 #[derive(Deserialize)]
 struct Config {
     toggl_api: ApiConfig,
@@ -30,28 +32,28 @@ async fn main() -> Result<(), reqwest::Error> {
     let config_content = fs::read_to_string("config.toml").expect("Failed to read config file");
     let config: Config = toml::from_str(&config_content).expect("Failed to parse config file");
 
-    info!("Getting time entries...");
+    info!("Getting time entries");
 
     let time_entries: Vec<toggl::TimeEntry> = toggl::get_time_entries(90, config.toggl_api).await?;
     println!("{:#?}", time_entries);
 
-    let re = Regex::new(r"(\w+-\d+) (.*)").unwrap();
-    let caps = re
-        .captures("DIT-2 Requirements und Zeitplan zusammenführen")
-        .unwrap();
-    log::error!("captures: {:#?}", caps);
+    info!("Filtering by Regex");
 
-    let issue_id = caps.get(1).unwrap().as_str();
-    let text = caps.get(2).unwrap().as_str();
+    let re = Regex::new(REGEX_STRING).unwrap();
 
     let time_entries = time_entries.iter().filter(|entry| {
-        entry
-            .description.clone()
-            .map(|text| re.captures(text.as_ref()).unwrap().get(1).is_some())
+        re.captures(entry.description.as_ref().unwrap_or(&"".to_string()))
+            .and_then(|x| x.get(1))
             .is_some()
     });
 
-    
+    for entry in time_entries {
+        if let Some(text) = entry.description.as_ref() {
+            info!("Entry: {}", text);
+        }
+    }
+
+
 
     let user = youtrack::get_current_user().await.unwrap();
     info!("User: {:#?}", user);
@@ -69,4 +71,20 @@ async fn main() -> Result<(), reqwest::Error> {
     //youtrack::send_post().await;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use regex::Regex;
+
+    use crate::REGEX_STRING;
+
+    #[tokio::test]
+    async fn test_regex() {
+        let re = Regex::new(REGEX_STRING).unwrap();
+        let caps = re.captures("DIT-2 My Description").unwrap();
+
+        assert_eq!(caps.get(1).unwrap().as_str(), "DIT-2");
+        assert_eq!(caps.get(2).unwrap().as_str(), "My Description");
+    }
 }
