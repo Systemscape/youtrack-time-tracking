@@ -1,0 +1,2 @@
+// Enter token and rename to "token.rs"
+pub const AUTH_TOKEN: &str = "perm:ABCDEFG";
