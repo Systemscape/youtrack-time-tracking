@@ -10,6 +10,7 @@ const BASE_URL: &str = "https://systemscape.youtrack.cloud";
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct IssueWorkItem {
+    #[serde(skip_serializing)]
     id: String,
     author: User,
     creator: User,
@@ -21,8 +22,6 @@ pub struct IssueWorkItem {
     duration: Duration,
     #[serde(with = "ts_milliseconds")]
     date: DateTime<Utc>,
-    #[serde(rename = "issue")]
-    issue_id: IssueId,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Duration {
@@ -39,76 +38,21 @@ pub struct WorkItemType {
     name: String,
 }
 
-pub async fn send_post() {
-    let mut map = HashMap::new();
-    map.insert("lang", "rust");
-    map.insert("body", "json");
+#[derive(Serialize, Deserialize, Debug)]
+pub struct User {
+    pub login: String,
+    pub id: String,
+}
 
-    //
-    //https://systemscape.youtrack.cloud/api/issues/2-35/timeTracking/workItems?fields=author(id,name),creator(id,name),date,duration(id,minutes,presentation),id,name,text,type(id,name)
-    let body = r###"
-{
-  "usesMarkdown": true,
-  "text": "I keep on testing *samples*.",
-  "date": 1539000000000,
-  "author": {
-    "id": "24-0"
-  },
-  "duration": {
-    "minutes": 120
-  },
-  "type": {
-    "id": "49-0"
-  }
-}"###;
-
+pub async fn create_work_item(item: IssueWorkItem) {
     let client = reqwest::Client::new();
     let issue_id = "SO-106";
 
     let res = client
-        .get(format!("{BASE_URL}/api/users/me?fields=id"))
-        .bearer_auth(AUTH_TOKEN)
-        .send()
-        .await;
-
-    let res = res.unwrap().json::<serde_json::Value>().await.unwrap();
-    info!("Got res: {:#?}", res);
-
-    let user_id = res.get("id").unwrap().as_str().unwrap();
-
-    info!("user_id is {user_id}");
-
-    let res = client
-    .get(format!("{BASE_URL}/api/issues/{issue_id}/timeTracking/workItems?fields=author(id,name),creator(id,name),date,duration(id,minutes,presentation),id,name,text,type(id,name)"))
-    .bearer_auth(AUTH_TOKEN)
-    .send()
-    .await;
-
-    info!(
-        "Got result: {:#?}",
-        res.unwrap().json::<serde_json::Value>().await
-    );
-
-    let res = client
-    .post(format!("{BASE_URL}/api/issues/{issue_id}/timeTracking/workItems?fields=author(name),creator(name),date,duration(id,minutes,presentation),id,name,text,type(id,name)"))
+    .post(format!("{BASE_URL}/api/issues/{issue_id}/timeTracking/workItems?fields=author(id,login),creator(id,login),date,created(minutes),duration(minutes),id,name,text,type(id,name),issue(idReadable)"))
     .bearer_auth(AUTH_TOKEN)
     .header("Content-Type", "application/json")
-    .body(r##"{
-  "usesMarkdown": true,
-  "text": "I keep on testing *samples*.",
-  "date": 1539000000000,
-  "author": {
-    "name": "jdickert",
-    "id": "1-8"
-  },
-  "duration": {
-    "minutes": 120
-  },
-  "type": {
-    "id": "139-0",
-    "name": "Development"
-  }
-}"##)
+    .body(serde_json::to_string(&item).unwrap())
     .send()
     .await;
 
@@ -116,24 +60,14 @@ pub async fn send_post() {
         "Got result: {:#?}",
         res.unwrap().json::<serde_json::Value>().await
     );
-
-    /*
-
-    let res = client
-        .post("http://httpbin.org/post")
-        .json(&map)
-        .send()
-        .await?;*/
 }
 
 pub async fn get_workitems(issue_id: &str) {
     let url = format!("{BASE_URL}/api/issues/{issue_id}/timeTracking/workItems?fields=author(id,login),creator(id,login),date,created(minutes),duration(minutes),id,name,text,type(id,name),issue(idReadable)");
 
-    let res = perform_request(&url).await.unwrap();
-    info!("Got result: {:#?}", res.json::<serde_json::Value>().await);
-
     let res = perform_request(&url).await.unwrap().text().await.unwrap();
     info!("Got res: {:#?}", res);
+
     let item: Vec<IssueWorkItem> = serde_json::from_str(&res).unwrap();
     info!("Got WorkItemType: {:#?}", item);
 }
@@ -141,12 +75,6 @@ pub async fn get_workitems(issue_id: &str) {
 pub async fn perform_request(url: &str) -> Result<reqwest::Response, reqwest::Error> {
     let client = reqwest::Client::new();
     client.get(url).bearer_auth(AUTH_TOKEN).send().await
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-pub struct User {
-    pub login: String,
-    pub id: String,
 }
 
 pub async fn get_current_user() -> Result<User, String> {
