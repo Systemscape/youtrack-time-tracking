@@ -1,40 +1,31 @@
-use reqwest::{Client, Method};
-use reqwest::header::{CONTENT_TYPE, AUTHORIZATION};
-use serde::Deserialize;
-use std::fs;
 use base64::{engine::general_purpose, Engine as _};
-use chrono::{Utc, Duration};
+use chrono::{Duration, Utc};
+use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
+use reqwest::{Client, Method};
+use serde::Deserialize;
+
+use crate::ApiConfig;
 
 #[derive(Deserialize, Debug)]
 pub struct TimeEntry {
-    at: String,
-    description: Option<String>,
-    duration: i64,
-    id: u64,
-    start: String, 
-    stop: Option<String>,
+    pub at: String,
+    pub description: Option<String>,
+    pub duration: i64,
+    pub id: u64,
+    pub start: String,
+    pub stop: Option<String>,
 }
 
-#[derive(Deserialize)]
-struct Config {
-    api: ApiConfig,
-}
-
-#[derive(Deserialize)]
-struct ApiConfig {
-    token: String,
-}
-
-pub async fn get_time_entries(days: i64) -> Result<Vec<TimeEntry>, reqwest::Error> {
-    // Read the config file
-    let config_content = fs::read_to_string("config.toml")
-        .expect("Failed to read config file");
-    let config: Config = toml::from_str(&config_content)
-        .expect("Failed to parse config file");
-
+pub async fn get_time_entries(
+    days: i64,
+    config: ApiConfig,
+) -> Result<Vec<TimeEntry>, reqwest::Error> {
     // Extract the API token
-    let api_token = config.api.token;
-    let authorization_value = format!("Basic {}", general_purpose::STANDARD.encode(format!("{}:api_token", api_token)));
+    let api_token = config.token;
+    let authorization_value = format!(
+        "Basic {}",
+        general_purpose::STANDARD.encode(format!("{}:api_token", api_token))
+    );
 
     // Calculate the Unix timestamp for one month ago
     let one_month_ago = Utc::now() - Duration::days(days);
@@ -42,8 +33,12 @@ pub async fn get_time_entries(days: i64) -> Result<Vec<TimeEntry>, reqwest::Erro
 
     // Create the HTTP client and make the request
     let client = Client::new();
-    let url = format!("https://api.track.toggl.com/api/v9/me/time_entries?since={}", since_timestamp);
-    let response = client.request(Method::GET, url)
+    let url = format!(
+        "https://api.track.toggl.com/api/v9/me/time_entries?since={}",
+        since_timestamp
+    );
+    let response = client
+        .request(Method::GET, url)
         .header(CONTENT_TYPE, "application/json")
         .header(AUTHORIZATION, authorization_value)
         .send()

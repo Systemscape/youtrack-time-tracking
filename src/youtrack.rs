@@ -1,5 +1,4 @@
-use chrono::{serde::ts_milliseconds, DateTime, NaiveDate, Utc};
-use std::collections::HashMap;
+use chrono::{serde::ts_milliseconds, DateTime, Utc};
 
 use crate::token::AUTH_TOKEN;
 
@@ -65,16 +64,15 @@ pub async fn create_work_item(item: IssueWorkItem) {
     );
 }
 
-pub async fn get_workitems(issue_id: &str) {
+pub async fn get_workitems(issue_id: &str) -> Vec<IssueWorkItem> {
     let url = format!(
         "{BASE_URL}/api/issues/{issue_id}/timeTracking/workItems?fields={WORK_ITEMS_FIELDS}"
     );
 
     let res = perform_request(&url).await.unwrap().text().await.unwrap();
-    info!("Got res: {:#?}", res);
-
-    let item: Vec<IssueWorkItem> = serde_json::from_str(&res).unwrap();
-    info!("Got WorkItemType: {:#?}", item);
+    let items: Vec<IssueWorkItem> = serde_json::from_str(&res).unwrap();
+    info!("Got items: {:#?}", items);
+    items
 }
 
 pub async fn perform_request(url: &str) -> Result<reqwest::Response, reqwest::Error> {
