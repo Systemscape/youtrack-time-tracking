@@ -1,5 +1,5 @@
 use base64::{engine::general_purpose, Engine as _};
-use chrono::{Duration, Utc};
+use chrono::{DateTime, Duration, FixedOffset, Utc};
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
 use reqwest::{Client, Method};
 use serde::Deserialize;
@@ -12,7 +12,7 @@ pub struct TimeEntry {
     pub description: Option<String>,
     pub duration: i64,
     pub id: u64,
-    pub start: String,
+    pub start: DateTime<FixedOffset>,
     pub stop: Option<String>,
 }
 

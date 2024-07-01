@@ -6,47 +6,47 @@ use log::info;
 use serde::{Deserialize, Serialize};
 
 const BASE_URL: &str = "https://systemscape.youtrack.cloud";
-const WORK_ITEMS_FIELDS: &str = "author(id,login),creator(id,login),date,created(minutes),duration(minutes),id,name,text,type(id,name),issue(idReadable)";
+const WORK_ITEMS_FIELDS: &str = "author(id,login),creator(id,login),date,created(minutes),duration(minutes),id,name,text,issue(idReadable)";
+//const WORK_ITEMS_FIELDS: &str = "author(id,login),creator(id,login),date,created(minutes),duration(minutes),id,name,text,type(id,name),issue(idReadable)";
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct IssueWorkItem {
     #[serde(skip_serializing)]
-    id: String,
-    author: User,
-    creator: User,
-    text: String,
-    #[serde(rename = "type")]
-    item_type: WorkItemType,
+    pub id: String,
+    pub author: User,
+    pub creator: User,
+    pub text: String,
+    //#[serde(rename = "type")]
+    //pub item_type: WorkItemType,
     #[serde(with = "ts_milliseconds")]
-    created: DateTime<Utc>,
-    duration: Duration,
+    pub created: DateTime<Utc>,
+    pub duration: Duration,
     #[serde(with = "ts_milliseconds")]
-    date: DateTime<Utc>,
+    pub date: DateTime<Utc>,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Duration {
-    minutes: u32,
+    pub minutes: u32,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct IssueId {
     #[serde(rename = "idReadable")]
-    id_readable: String,
+    pub id_readable: String,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct WorkItemType {
-    id: String,
-    name: String,
+    pub id: String,
+    pub name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct User {
     pub login: String,
     pub id: String,
 }
 
-pub async fn create_work_item(item: IssueWorkItem) {
+pub async fn create_work_item(issue_id: &str, item: IssueWorkItem) {
     let client = reqwest::Client::new();
-    let issue_id = "SO-106";
 
     let res = client
         .post(format!(
