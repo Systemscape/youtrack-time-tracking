@@ -7,6 +7,7 @@ use log::info;
 use serde::{Deserialize, Serialize};
 
 const BASE_URL: &str = "https://systemscape.youtrack.cloud";
+const WORK_ITEMS_FIELDS: &str = "author(id,login),creator(id,login),date,created(minutes),duration(minutes),id,name,text,type(id,name),issue(idReadable)";
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct IssueWorkItem {
@@ -49,12 +50,14 @@ pub async fn create_work_item(item: IssueWorkItem) {
     let issue_id = "SO-106";
 
     let res = client
-    .post(format!("{BASE_URL}/api/issues/{issue_id}/timeTracking/workItems?fields=author(id,login),creator(id,login),date,created(minutes),duration(minutes),id,name,text,type(id,name),issue(idReadable)"))
-    .bearer_auth(AUTH_TOKEN)
-    .header("Content-Type", "application/json")
-    .body(serde_json::to_string(&item).unwrap())
-    .send()
-    .await;
+        .post(format!(
+            "{BASE_URL}/api/issues/{issue_id}/timeTracking/workItems?fields={WORK_ITEMS_FIELDS}"
+        ))
+        .bearer_auth(AUTH_TOKEN)
+        .header("Content-Type", "application/json")
+        .body(serde_json::to_string(&item).unwrap())
+        .send()
+        .await;
 
     info!(
         "Got result: {:#?}",
@@ -63,7 +66,9 @@ pub async fn create_work_item(item: IssueWorkItem) {
 }
 
 pub async fn get_workitems(issue_id: &str) {
-    let url = format!("{BASE_URL}/api/issues/{issue_id}/timeTracking/workItems?fields=author(id,login),creator(id,login),date,created(minutes),duration(minutes),id,name,text,type(id,name),issue(idReadable)");
+    let url = format!(
+        "{BASE_URL}/api/issues/{issue_id}/timeTracking/workItems?fields={WORK_ITEMS_FIELDS}"
+    );
 
     let res = perform_request(&url).await.unwrap().text().await.unwrap();
     info!("Got res: {:#?}", res);
@@ -91,4 +96,21 @@ pub async fn get_current_user() -> Result<User, String> {
 
     let user: User = serde_json::from_str(&res).unwrap();
     Ok(user)
+}
+
+#[cfg(test)]
+mod test {
+    use log::info;
+
+    use crate::youtrack;
+
+    #[tokio::test]
+    async fn test_serde() {
+        simple_logger::init().unwrap();
+
+        let user = youtrack::get_current_user().await.unwrap();
+        info!("User: {:#?}", user);
+
+        youtrack::get_workitems("SO-106").await;
+    }
 }
