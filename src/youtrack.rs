@@ -23,6 +23,7 @@ pub struct IssueWorkItem {
     pub duration: Duration,
     #[serde(with = "ts_milliseconds")]
     pub date: DateTime<Utc>,
+    pub issue: IssueId,
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Duration {
@@ -64,15 +65,17 @@ pub async fn create_work_item(issue_id: &str, item: IssueWorkItem) {
     );
 }
 
-pub async fn get_workitems(issue_id: &str) -> Vec<IssueWorkItem> {
+pub async fn get_workitems(issue_id: String) -> Result<Vec<IssueWorkItem>, reqwest::Error> {
+    info!("get_workitems for issue_id {}", &issue_id);
     let url = format!(
         "{BASE_URL}/api/issues/{issue_id}/timeTracking/workItems?fields={WORK_ITEMS_FIELDS}"
     );
 
-    let res = perform_request(&url).await.unwrap().text().await.unwrap();
+    let res = perform_request(&url).await.unwrap();
+    let res = res.error_for_status()?.text().await.unwrap();
     let items: Vec<IssueWorkItem> = serde_json::from_str(&res).unwrap();
-    info!("Got items: {:#?}", items);
-    items
+
+    Ok(items)
 }
 
 pub async fn perform_request(url: &str) -> Result<reqwest::Response, reqwest::Error> {

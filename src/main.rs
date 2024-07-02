@@ -1,9 +1,8 @@
-use futures::{stream, StreamExt};
+use futures::{stream, StreamExt, TryFutureExt};
 use log::info;
 use serde::Deserialize;
-use serde_json::error;
-use std::{collections::HashMap, fs};
-use youtrack::{Duration, IssueWorkItem, WorkItemType};
+use std::{collections::HashMap, error, fs};
+use youtrack::{Duration, IssueWorkItem};
 
 use regex::Regex;
 
@@ -43,7 +42,7 @@ async fn main() -> Result<(), reqwest::Error> {
     info!("Getting time entries");
 
     let time_entries: Vec<toggl::TimeEntry> = toggl::get_time_entries(90, config.toggl_api).await?;
-    println!("{:#?}", time_entries);
+    //println!("{:#?}", time_entries);
 
     info!("Filtering by Regex");
 
@@ -64,11 +63,11 @@ async fn main() -> Result<(), reqwest::Error> {
     });
 
     let mut unique_issue_ids: HashMap<String, Vec<ExtendedTimeEntry>> = HashMap::new();
-    for entry in time_entries.by_ref() {
+    for entry in time_entries {
         info!("ID: {}, description: {}", entry.issue_id, entry.description);
         unique_issue_ids
             .entry(entry.issue_id.clone())
-            .or_insert(Vec::new())
+            .or_default()
             .push(entry);
     }
 
@@ -80,17 +79,56 @@ async fn main() -> Result<(), reqwest::Error> {
     info!("User: {:#?}", user);
 
     let work_items = stream::iter(unique_issue_ids)
-        .map(|(issue_id, entries)| async move {
-            // Get the WorkItems for the given issue id
-            let work_items = youtrack::get_workitems(&issue_id).await;
-            // Now filter out all entries that are already there, i.e., all entries whose ID already occurs in any WorkItem
-            entries.into_iter().filter(move |entry| {
+        .filter_map(|(issue_id, _)| async move {
+            match youtrack::get_workitems(issue_id.clone()).await {
+                Ok(work_items) => Some(stream::iter(work_items)), // necessary to use flatten later
+                Err(e) => {
+                    log::error!("Could not obtain WorkItem for issue_id {}: {}", issue_id, e);
+                    None
+                }
+            }
+        })
+        .flatten()
+        .collect::<Vec<_>>()
+        .await;
+
+    let work_items_map = HashMap::new();
+    work_items.into_iter().for_each(|item| {
+        work_items_map
+            .entry(item.issue.id_readable)
+            .or_default()
+            .push(item)
+    });
+
+    log::error!("Got work_items without errors: {:#?}", &work_items);
+
+    let time_entries = unique_issue_ids
+        .into_iter()
+        .filter_map(|(issue_id, time_entry)| {
+            match work_items.get(&issue_id) {
+                None => Some(time_entry),
+                Some(work_item) => {}
+            }
+            // Make sure that not any of the work_items already contains that id
+            !work_items.iter().any(|work_item| {
+                work_item
+                    .text
+                    .contains(&time_entry.toggl_time_entry.id.to_string())
+            })
+        })
+        .collect::<Vec<_>>();
+
+    log::error!("time_entries left: {:#?}", time_entries);
+    return Ok(());
+
+    /*
+    Some(entries.into_iter().filter(move |entry| {
                 !work_items
                     .iter()
                     .any(|item| item.text.contains(&entry.toggl_time_entry.id.to_string()))
-            })
-        })
-        .buffer_unordered(10);
+            })))
+
+            //log::error!("Could not obtain WorkItem for issue_id {}: {}",&issue_id,e);
 
     work_items
         .for_each(|entries| async {
@@ -107,12 +145,16 @@ async fn main() -> Result<(), reqwest::Error> {
                     date: entry.toggl_time_entry.start.into(),
                 };
 
-                info!("Issue {} - creating work_item: {:#?}", &entry.issue_id, &work_item);
-                youtrack::create_work_item(&entry.issue_id, work_item)
-                .await
+                info!(
+                    "Issue {} - creating work_item: {:#?}",
+                    &entry.issue_id, &work_item
+                );
+                youtrack::create_work_item(&entry.issue_id, work_item).await
             }
         })
         .await;
+
+    */
 
     //youtrack::send_post().await;
 
@@ -133,4 +175,9 @@ mod test {
         assert_eq!(caps.get(1).unwrap().as_str(), "DIT-2");
         assert_eq!(caps.get(2).unwrap().as_str(), "My Description");
     }
+}
+
+#[tokio::test]
+async fn test_wrong_issue_id() {
+    youtrack::get_workitems("ABC-123").await;
 }
