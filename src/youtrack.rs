@@ -23,7 +23,8 @@ pub struct IssueWorkItem {
     pub duration: Duration,
     #[serde(with = "ts_milliseconds")]
     pub date: DateTime<Utc>,
-    pub issue: IssueId,
+    #[serde(skip_serializing)]
+    pub issue: Option<IssueId>, // Read-only field, store as option
 }
 #[derive(Serialize, Deserialize, Debug)]
 pub struct Duration {
