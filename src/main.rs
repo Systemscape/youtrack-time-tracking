@@ -2,11 +2,10 @@ use futures::{stream, StreamExt};
 use log::info;
 use serde::Deserialize;
 use std::{
-    collections::{HashMap, HashSet, LinkedList},
+    collections::{HashMap, HashSet},
     fs,
-    sync::Arc,
 };
-use youtrack::{Duration, IssueId, IssueWorkItem};
+use youtrack::{Duration, IssueWorkItem};
 
 use regex::Regex;
 
