@@ -10,6 +10,7 @@ use crate::ApiConfig;
 pub struct TimeEntry {
     pub at: String,
     pub description: Option<String>,
+    /// Duration in seconds
     pub duration: i64,
     pub id: u64,
     pub start: DateTime<FixedOffset>,
