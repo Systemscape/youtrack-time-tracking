@@ -9,7 +9,7 @@ use crate::ApiConfig;
 #[derive(Deserialize, Debug)]
 pub struct TimeEntry {
     pub at: String,
-    pub description: Option<String>,
+    pub description: Option<String>, // API docs say entry with no description is null/None, but in practice it's an empty string, e.g. ""
     /// Duration in seconds
     pub duration: i64,
     pub id: u64,
