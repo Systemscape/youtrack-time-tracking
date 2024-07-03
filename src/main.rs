@@ -11,7 +11,6 @@ use youtrack::{Duration, IssueWorkItem};
 
 use regex::Regex;
 
-mod token;
 mod youtrack;
 
 mod toggl;
@@ -24,7 +23,7 @@ struct Config {
     youtrack_api: ApiConfig,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 struct ApiConfig {
     token: String,
 }
@@ -45,7 +44,7 @@ async fn main() -> Result<(), reqwest::Error> {
     let config: Config = toml::from_str(&config_content).expect("Failed to parse config file");
 
     // Get the current youtrack user for later use
-    let user = youtrack::get_current_user().await.unwrap();
+    let user = youtrack::get_current_user(config.youtrack_api.clone()).await.unwrap();
     info!("User: {:#?}", user);
 
     // Get all toggl time entries of the last X days.
@@ -93,8 +92,9 @@ async fn main() -> Result<(), reqwest::Error> {
     // The association is represented by a HashMap. This should happen asynchronously (slow web reqs).
     let work_items_map = stream::iter(unique_issue_ids)
         .filter_map(|issue_id| {
+            let youtrack_apiconfig_clone = config.youtrack_api.clone();
             async move {
-                match youtrack::get_workitems(issue_id.clone()).await {
+                match youtrack::get_workitems(issue_id.clone(), youtrack_apiconfig_clone).await {
                     // If WorkItems are obtained for this issue ID, return them.
                     Ok(work_items) => Some((issue_id.clone(), work_items)),
                     // Otherwise do not include that Issue ID in the HashMap.
@@ -190,7 +190,7 @@ async fn main() -> Result<(), reqwest::Error> {
                         "Issue {} - creating work_item: {:#?}",
                         &entry.issue_id, &work_item
                     );
-                    youtrack::create_work_item(&entry.issue_id, work_item).await
+                    youtrack::create_work_item(&entry.issue_id, work_item, config.youtrack_api.clone()).await
                 } else {
                     log::warn!("Duration not > 0. Skipping entry: {:#?}", entry);
                 }
@@ -215,9 +215,4 @@ mod test {
         assert_eq!(caps.get(1).unwrap().as_str(), "DIT-2");
         assert_eq!(caps.get(2).unwrap().as_str(), "My Description");
     }
-}
-
-#[tokio::test]
-async fn test_wrong_issue_id() {
-    youtrack::get_workitems("ABC-123".to_string()).await;
 }
