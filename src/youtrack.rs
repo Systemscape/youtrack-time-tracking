@@ -1,8 +1,6 @@
-use chrono::{serde::ts_milliseconds, DateTime, Utc};
-
 use crate::token::AUTH_TOKEN;
-
-use log::info;
+use chrono::{serde::ts_milliseconds, DateTime, Utc};
+use log::debug;
 use serde::{Deserialize, Serialize};
 
 const BASE_URL: &str = "https://systemscape.youtrack.cloud";
@@ -60,14 +58,14 @@ pub async fn create_work_item(issue_id: &str, item: IssueWorkItem) {
         .send()
         .await;
 
-    info!(
-        "Got result: {:#?}",
+    debug!(
+        "create_work_item - got result: {:#?}",
         res.unwrap().json::<serde_json::Value>().await
     );
 }
 
 pub async fn get_workitems(issue_id: String) -> Result<Vec<IssueWorkItem>, reqwest::Error> {
-    info!("get_workitems for issue_id {}", &issue_id);
+    debug!("get_workitems for issue_id {}", &issue_id);
     let url = format!(
         "{BASE_URL}/api/issues/{issue_id}/timeTracking/workItems?fields={WORK_ITEMS_FIELDS}"
     );
@@ -94,7 +92,7 @@ pub async fn get_current_user() -> Result<User, String> {
         .await;
 
     let res = res.unwrap().text().await.unwrap();
-    info!("Got res: {:#?}", res);
+    debug!("get_current_user - got res: {:#?}", res);
 
     let user: User = serde_json::from_str(&res).unwrap();
     Ok(user)

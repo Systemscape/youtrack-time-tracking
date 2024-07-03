@@ -1,9 +1,11 @@
+use dialoguer::{theme::ColorfulTheme, Confirm};
 use futures::{stream, StreamExt};
-use log::info;
+use log::{debug, info};
 use serde::Deserialize;
 use std::{
     collections::{HashMap, HashSet},
     fs,
+    process::exit,
 };
 use youtrack::{Duration, IssueWorkItem};
 
@@ -72,7 +74,7 @@ async fn main() -> Result<(), reqwest::Error> {
     // Create a HashMap that matches each unique Issue ID with a Vec of toggl time entries
     let mut issue_id_time_entries_map: HashMap<String, Vec<ExtendedTimeEntry>> = HashMap::new();
     for entry in time_entries {
-        info!("ID: {}, description: {}", entry.issue_id, entry.description);
+        debug!("ID: {}, description: {}", entry.issue_id, entry.description);
         issue_id_time_entries_map
             .entry(entry.issue_id.clone())
             .or_default()
@@ -85,7 +87,7 @@ async fn main() -> Result<(), reqwest::Error> {
         .cloned()
         .collect::<HashSet<_>>();
 
-    info!("unique_issue_ids: {:#?}", &unique_issue_ids);
+    debug!("unique_issue_ids: {:#?}", &unique_issue_ids);
 
     // For all unique Issue IDs, obtain a Vec of associated IssueWorkItems.
     // The association is represented by a HashMap. This should happen asynchronously (slow web reqs).
@@ -109,9 +111,9 @@ async fn main() -> Result<(), reqwest::Error> {
     // The Issue IDs that exist on youtrack correspond to the keys of the HashMap.
     let existent_issue_ids = work_items_map.keys().cloned().collect::<Vec<_>>();
 
-    log::error!("Existent issue_ids: {:#?}", &existent_issue_ids);
+    log::debug!("Existent issue_ids: {:#?}", &existent_issue_ids);
 
-    log::error!("Got work_items without errors: {:#?}", &work_items_map);
+    log::debug!("Got work_items without errors: {:#?}", &work_items_map);
 
     // Filter out all toggl time entries that have an Issue ID associated that is not valid on youtrack
     let existent_issue_id_time_entries_map = issue_id_time_entries_map
@@ -135,7 +137,7 @@ async fn main() -> Result<(), reqwest::Error> {
                 Some(work_items) => {
                     let missing_time_entries_for_id = time_entries_for_id
                         .into_iter()
-                        .filter(|time_entry_for_id| 
+                        .filter(|time_entry_for_id|
                             // Keep only if not any work_item contains the ID in the "text" field 
                             !work_items.iter().any(|item| {
                                 item.text
@@ -153,8 +155,15 @@ async fn main() -> Result<(), reqwest::Error> {
         })
         .collect::<Vec<_>>();
 
-    log::error!("missing_time_entries: {:#?}", missing_time_entries);
+    log::info!("missing_time_entries: {:#?}", missing_time_entries);
 
+    if !Confirm::with_theme(&ColorfulTheme::default())
+        .with_prompt("Do you want to continue?")
+        .interact()
+        .unwrap()
+    {
+        exit(1);
+    }
 
     // Create a work item for all missing time entries
     stream::iter(missing_time_entries)
@@ -168,7 +177,7 @@ async fn main() -> Result<(), reqwest::Error> {
                         id: "".to_string(),
                         author: user.clone(),
                         creator: user.clone(),
-                        text: entry.toggl_time_entry.id.to_string(),
+                        text: entry.toggl_time_entry.id.to_string() + " - " + &entry.description,
                         created: chrono::Local::now().into(),
                         duration: Duration {
                             minutes: duration_minutes,
@@ -177,7 +186,7 @@ async fn main() -> Result<(), reqwest::Error> {
                         issue: None,
                     };
 
-                    info!(
+                    debug!(
                         "Issue {} - creating work_item: {:#?}",
                         &entry.issue_id, &work_item
                     );
