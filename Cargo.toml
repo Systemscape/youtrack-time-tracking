@@ -19,4 +19,5 @@ toml = "0.8"
 base64 = "0.22"
 futures = "0.3.30"
 regex = "1.10.5"
-dialoguer = { version = "0.11.0", no-default-features = true }
+dialoguer = { version = "0.11.0", default-features = false }
+
