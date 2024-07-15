@@ -4,7 +4,7 @@ use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
 use reqwest::{Client, Method};
 use serde::Deserialize;
 
-use crate::ApiConfig;
+use crate::token::AUTH_TOKEN_TOGGL;
 
 #[derive(Deserialize, Debug)]
 pub struct TimeEntry {
@@ -19,13 +19,10 @@ pub struct TimeEntry {
 
 pub async fn get_time_entries(
     days: i64,
-    config: ApiConfig,
 ) -> Result<Vec<TimeEntry>, reqwest::Error> {
-    // Extract the API token
-    let api_token = config.token;
     let authorization_value = format!(
         "Basic {}",
-        general_purpose::STANDARD.encode(format!("{}:api_token", api_token))
+        general_purpose::STANDARD.encode(format!("{}:api_token", AUTH_TOKEN_TOGGL))
     );
 
     // Calculate the Unix timestamp for one month ago

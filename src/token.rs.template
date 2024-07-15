@@ -1,2 +1,3 @@
 // Enter token and rename to "token.rs"
-pub const AUTH_TOKEN: &str = "perm:ABCDEFG";
+pub const AUTH_TOKEN_YOUTRACK: &str = "perm:ABCDEFG";
+pub const AUTH_TOKEN_TOGGL: &str = "abcde";

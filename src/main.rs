@@ -1,10 +1,8 @@
 use dialoguer::{theme::ColorfulTheme, Confirm};
 use futures::{stream, StreamExt};
 use log::{debug, info};
-use serde::Deserialize;
 use std::{
     collections::{HashMap, HashSet},
-    fs,
     process::exit,
 };
 use youtrack::{Duration, IssueWorkItem};
@@ -18,17 +16,6 @@ mod toggl;
 
 const REGEX_STRING: &str = r"(\w+-\d+) (.*)";
 
-#[derive(Deserialize)]
-struct Config {
-    toggl_api: ApiConfig,
-    youtrack_api: ApiConfig,
-}
-
-#[derive(Deserialize)]
-struct ApiConfig {
-    token: String,
-}
-
 #[derive(Debug)]
 struct ExtendedTimeEntry {
     toggl_time_entry: toggl::TimeEntry,
@@ -40,17 +27,13 @@ struct ExtendedTimeEntry {
 async fn main() -> Result<(), reqwest::Error> {
     simple_logger::init().unwrap();
 
-    // Read the config file
-    let config_content = fs::read_to_string("config.toml").expect("Failed to read config file");
-    let config: Config = toml::from_str(&config_content).expect("Failed to parse config file");
-
     // Get the current youtrack user for later use
     let user = youtrack::get_current_user().await.unwrap();
     info!("User: {:#?}", user);
 
     // Get all toggl time entries of the last X days.
     info!("Getting toggl time entries");
-    let time_entries: Vec<toggl::TimeEntry> = toggl::get_time_entries(90, config.toggl_api).await?;
+    let time_entries: Vec<toggl::TimeEntry> = toggl::get_time_entries(90).await?;
 
     // Create a regex to extract the Issue ID from the time entry
     let re = Regex::new(REGEX_STRING).unwrap();

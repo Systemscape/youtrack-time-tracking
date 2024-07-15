@@ -1,4 +1,4 @@
-use crate::token::AUTH_TOKEN;
+use crate::token::AUTH_TOKEN_YOUTRACK;
 use chrono::{serde::ts_milliseconds, DateTime, Utc};
 use log::debug;
 use serde::{Deserialize, Serialize};
@@ -52,7 +52,7 @@ pub async fn create_work_item(issue_id: &str, item: IssueWorkItem) {
         .post(format!(
             "{BASE_URL}/api/issues/{issue_id}/timeTracking/workItems?fields={WORK_ITEMS_FIELDS}"
         ))
-        .bearer_auth(AUTH_TOKEN)
+        .bearer_auth(AUTH_TOKEN_YOUTRACK)
         .header("Content-Type", "application/json")
         .body(serde_json::to_string(&item).unwrap())
         .send()
@@ -79,7 +79,7 @@ pub async fn get_workitems(issue_id: String) -> Result<Vec<IssueWorkItem>, reqwe
 
 pub async fn perform_request(url: &str) -> Result<reqwest::Response, reqwest::Error> {
     let client = reqwest::Client::new();
-    client.get(url).bearer_auth(AUTH_TOKEN).send().await
+    client.get(url).bearer_auth(AUTH_TOKEN_YOUTRACK).send().await
 }
 
 pub async fn get_current_user() -> Result<User, String> {
@@ -87,7 +87,7 @@ pub async fn get_current_user() -> Result<User, String> {
 
     let res = client
         .get(format!("{BASE_URL}/api/users/me?fields=id,login"))
-        .bearer_auth(AUTH_TOKEN)
+        .bearer_auth(AUTH_TOKEN_YOUTRACK)
         .send()
         .await;
 
@@ -111,6 +111,6 @@ mod test {
         let user = youtrack::get_current_user().await.unwrap();
         info!("User: {:#?}", user);
 
-        youtrack::get_workitems("SO-106").await;
+        youtrack::get_workitems("SO-106".into()).await;
     }
 }
