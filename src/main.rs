@@ -38,8 +38,12 @@ async fn main() -> Result<(), reqwest::Error> {
     // Create a regex to extract the Issue ID from the time entry
     let re = Regex::new(REGEX_STRING).unwrap();
 
+    // Filter-out every TimeEntry whose stop time is not set (i.e., that is still running!)
+    // And every TimeEntry with a duration less than 1 minute because YouTrack only tracks with minute precision
+    let time_entries = time_entries.into_iter().filter(|x| x.stop.is_some() && x.duration >= 60);
+
     // Filter time entries that match the regex and return iterator of ExtendedTimeEntry with that data
-    let time_entries = time_entries.into_iter().filter_map(|entry| {
+    let time_entries = time_entries.filter_map(|entry| {
         re.captures(&entry.description.clone().unwrap_or("".to_string()))
             .and_then(|x| {
                 // Issue ID is in the first capture
