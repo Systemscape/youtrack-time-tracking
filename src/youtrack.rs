@@ -3,7 +3,7 @@ use chrono::{serde::ts_milliseconds, DateTime, Utc};
 use log::debug;
 use serde::{Deserialize, Serialize};
 
-const BASE_URL: &str = "https://systemscape.youtrack.cloud";
+const BASE_URL: &str = "https://youtrack.systemscape.de"; 
 const WORK_ITEMS_FIELDS: &str = "author(id,login),creator(id,login),date,created(minutes),duration(minutes),id,name,text,issue(idReadable)";
 //const WORK_ITEMS_FIELDS: &str = "author(id,login),creator(id,login),date,created(minutes),duration(minutes),id,name,text,type(id,name),issue(idReadable)";
 
