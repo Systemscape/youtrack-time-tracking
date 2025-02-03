@@ -14,7 +14,7 @@ mod youtrack;
 
 mod toggl;
 
-const REGEX_STRING: &str = r"(\w+-\d+) (.*)";
+const REGEX_STRING: &str = r"(\w+-\d+)(?: +(.*))*";
 
 #[derive(Debug)]
 struct ExtendedTimeEntry {
@@ -48,8 +48,9 @@ async fn main() -> Result<(), reqwest::Error> {
             .and_then(|x| {
                 // Issue ID is in the first capture
                 let issue_id = x.get(1)?.as_str().to_string();
-                // Description text is everything that follows, i.e., the second capture
-                let description = x.get(2)?.as_str().to_string();
+                // Description text is everything that follows, i.e., the second capture. If it is empty, make an empty string
+                let description = x.get(2).map_or(String::new(), |m| m.as_str().to_string());
+
                 Some(ExtendedTimeEntry {
                     toggl_time_entry: entry,
                     issue_id,
