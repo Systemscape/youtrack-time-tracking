@@ -25,9 +25,9 @@ pub async fn get_time_entries(
         general_purpose::STANDARD.encode(format!("{}:api_token", AUTH_TOKEN_TOGGL))
     );
 
-    // Calculate the Unix timestamp for one month ago
-    let one_month_ago = Utc::now() - Duration::days(days);
-    let since_timestamp = one_month_ago.timestamp();
+    // Calculate the Unix timestamp x days ago
+    let x_days_ago = Utc::now() - Duration::days(days);
+    let since_timestamp = x_days_ago.timestamp();
 
     // Create the HTTP client and make the request
     let client = Client::new();

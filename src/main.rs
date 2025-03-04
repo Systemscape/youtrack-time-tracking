@@ -33,7 +33,7 @@ async fn main() -> Result<(), reqwest::Error> {
 
     // Get all toggl time entries of the last X days.
     info!("Getting toggl time entries");
-    let time_entries: Vec<toggl::TimeEntry> = toggl::get_time_entries(90).await?;
+    let time_entries: Vec<toggl::TimeEntry> = toggl::get_time_entries(89).await?;
 
     // Create a regex to extract the Issue ID from the time entry
     let re = Regex::new(REGEX_STRING).unwrap();
