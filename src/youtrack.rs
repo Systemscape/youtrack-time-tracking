@@ -111,6 +111,6 @@ mod test {
         let user = youtrack::get_current_user().await.unwrap();
         info!("User: {:#?}", user);
 
-        youtrack::get_workitems("SO-106".into()).await;
+        youtrack::get_workitems("SO-106".into()).await.unwrap();
     }
 }

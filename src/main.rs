@@ -206,6 +206,7 @@ mod test {
 }
 
 #[tokio::test]
+#[should_panic]
 async fn test_wrong_issue_id() {
-    youtrack::get_workitems("ABC-123".to_string()).await;
+    let _ = youtrack::get_workitems("ABC-123".to_string()).await.unwrap();
 }
